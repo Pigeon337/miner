@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Żulcoin Web Miner</title>
+    <title>Zulcoin Web Miner</title>
     <style>
         body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-family: sans-serif; 
             text-align: center; 
             background: #121212; 
             color: #e0e0e0; 
             padding: 30px;
-            margin: 0;
         }
         .container {
             max-width: 500px;
@@ -19,9 +18,8 @@
             background: #1e1e1e;
             padding: 30px;
             border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
-        h1 { color: #ff9800; font-size: 28px; margin-bottom: 25px; }
+        h1 { color: #ff9800; }
         input { 
             padding: 12px; 
             font-size: 16px; 
@@ -41,10 +39,7 @@
             cursor: pointer; 
             font-weight: bold;
             border-radius: 6px;
-            transition: 0.2s;
         }
-        button:hover { background: #e08600; }
-        button:disabled { background: #555; color: #aaa; cursor: not-allowed; }
         #stats { 
             font-size: 18px; 
             margin-top: 25px; 
@@ -59,16 +54,15 @@
 <body>
 
     <div class="container">
-        <h1>⛏️ Żulcoin Web Miner ⛏️</h1>
-        <input type="text" id="username" placeholder="Wpisz swój nick...">
+        <h1>⛏️ Zulcoin Web Miner ⛏️</h1>
+        <input type="text" id="username" placeholder="Wpisz swoj nick...">
         <br>
         <button id="startBtn" onclick="startMining()">Rozpocznij kopanie</button>
         
-        <div id="stats">Status: Oczekiwanie na uruchomienie...</div>
+        <div id="stats">Status: Oczekiwanie...</div>
     </div>
 
     <script>
-        // --- TUTAJ WKLEJ SWÓJ URL Z GOOGLE APPS SCRIPT ---
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwAtip-DFf61M8KH0p_AR7e7pGlPipqxNO1-3Ns2fbXwh36lu06vzpW89CTue_NI6DJ/exec";
 
         let mining = false;
@@ -76,16 +70,17 @@
         let userNick = "";
 
         function startMining() {
-            userNick = document.getElementById('username').value.trim();
-            if(!userNick) return alert("Musisz wpisać swój nick!");
+            userNick = document.getElementById("username").value.trim();
+            if(!userNick) {
+                alert("Wpisz nick!");
+                return;
+            }
             
             mining = true;
-            document.getElementById('startBtn').disabled = true;
-            document.getElementById('username').disabled = true;
+            document.getElementById("startBtn").disabled = true;
+            document.getElementById("username").disabled = true;
             
             mineLoop();
-            
-            // Zapis do Arkusza Google co 15 sekund
             setInterval(saveProgress, 15000);
         }
 
@@ -95,27 +90,22 @@
             crypto.subtle.digest("SHA-256", new TextEncoder().encode(Math.random().toString()));
             hashesCount++;
             
-            document.getElementById('stats').innerHTML = `
-                Kopiesz jako: <strong>${userNick}</strong><br>
-                Obliczone hashe: ${hashesCount}
-            `;
+            document.getElementById("stats").innerHTML = "Kopiesz jako: <strong>" + userNick + "</strong><br>Hashe: " + hashesCount;
             
             setTimeout(mineLoop, 1);
         }
 
-        async function saveProgress() {
+        function saveProgress() {
             if(!mining) return;
 
-            // 1 moneta za każde 2000 hashy
             const reward = Math.floor(hashesCount / 2000);
             if (reward === 0) return;
             
             hashesCount = 0; 
 
-            // Wysyłamy dane metodą POST do Arkusza Google
             fetch(SCRIPT_URL, {
                 method: "POST",
-                mode: "no-cors", // Ignoruje błędy CORS w przeglądarce, Google i tak to zapisze
+                mode: "no-cors",
                 cache: "no-cache",
                 headers: {
                     "Content-Type": "application/json"
@@ -125,11 +115,11 @@
                     reward: reward
                 })
             })
-            .then(() => {
-                console.log(`Paczka danych wysłana do Arkusza dla: ${userNick}`);
+            .then(function() {
+                console.log("Wyslano paczke");
             })
-            .catch(err => {
-                console.error("Błąd wysyłania do Arkusza:", err);
+            .catch(function(err) {
+                console.error("Blad:", err);
             });
         }
     </script>
