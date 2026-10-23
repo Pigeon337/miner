@@ -2,31 +2,80 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Żulcoin Web Miner</title>
     <!-- Ładowanie Supabase -->
-    <script src="https://jsdelivr.net"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; background: #222; color: #fff; padding-top: 50px; }
-        input, button { padding: 10px; font-size: 16px; margin: 5px; }
-        #stats { font-size: 20px; margin-top: 20px; color: #00ffcc; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            text-align: center; 
+            background: #121212; 
+            color: #e0e0e0; 
+            padding: 30px;
+            margin: 0;
+        }
+        .container {
+            max-width: 500px;
+            margin: 50px auto;
+            background: #1e1e1e;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        h1 { color: #ff9800; font-size: 28px; margin-bottom: 25px; }
+        input { 
+            padding: 12px; 
+            font-size: 16px; 
+            width: 80%; 
+            margin-bottom: 15px; 
+            background: #2d2d2d; 
+            border: 1px solid #444; 
+            color: #fff; 
+            border-radius: 6px;
+        }
+        button { 
+            padding: 12px 24px; 
+            font-size: 16px; 
+            background: #ff9800; 
+            color: #000; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: bold;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
+        button:hover { background: #e08600; }
+        button:disabled { background: #555; color: #aaa; cursor: not-allowed; }
+        #stats { 
+            font-size: 18px; 
+            margin-top: 25px; 
+            color: #00ffcc; 
+            font-family: monospace;
+            background: #151515;
+            padding: 15px;
+            border-radius: 6px;
+        }
     </style>
 </head>
 <body>
 
-    <h1>⛏️ Żulcoin Web Miner ⛏️</h1>
-    <input type="text" id="username" placeholder="Wpisz swój nick...">
-    <br>
-    <button id="startBtn" onclick="startMining()">Rozpocznij kopanie</button>
-    
-    <div id="stats">Status: Oczekiwanie...</div>
+    <div class="container">
+        <h1>⛏️ Żulcoin Web Miner ⛏️</h1>
+        <input type="text" id="username" placeholder="Wpisz swój nick...">
+        <br>
+        <button id="startBtn" onclick="startMining()">Rozpocznij kopanie</button>
+        
+        <div id="stats">Status: Oczekiwanie na uruchomienie...</div>
+    </div>
 
     <script>
-        // --- KONFIGURACJA SUPABASE ---
-// --- KONFIGURACJA SUPABASE ---
-	const SUPABASE_URL = "https://pktfhhkkiiqbgeorrbig.supabase.co";
-	const SUPABASE_KEY = 	"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrdGZoaGtraWlxYmdlb3JyYmlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NjgxODAsImV4cCI6MjEwODM0NDE4MH0.	L7QGv1yUMsgQ6zU-MIqqlA7_ycpjWO4vZBiDlhfo2eM";
-	const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+        // --- TWOJA KONFIGURACJA SUPABASE ---
+        const SUPABASE_URL = "https://pktfhhkkiiqbgeorrbig.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrdGZoaGtraWlxYmdlb3JyYmlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NjgxODAsImV4cCI6MjEwODM0NDE4MH0.L7QGv1yUMsgQ6zU-MIqqlA7_ycpjWO4vZBiDlhfo2eM";
+        
+        // POPRAWIONO: Inicjalizacja poprzez zmienną globalną window
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let mining = false;
         let hashesCount = 0;
@@ -34,51 +83,66 @@
 
         async function startMining() {
             username = document.getElementById('username').value.trim();
-            if(!username) return alert("Wpisz nick!");
+            if(!username) return alert("Musisz wpisać swój nick!");
             
             mining = true;
             document.getElementById('startBtn').disabled = true;
             document.getElementById('username').disabled = true;
             
-            // Pętla kopiąca (liczenie losowych hashy w tle)
             mineLoop();
             
-            // Pętla wysyłająca nagrodę do bazy co 10 sekund
+            // Wysyłanie urobku automatycznie co 10 sekund
             setInterval(saveProgress, 10000);
         }
 
         function mineLoop() {
             if(!mining) return;
-            // Proste symulowanie pracy procesora (generowanie hashu)
+            
             crypto.subtle.digest("SHA-256", new TextEncoder().encode(Math.random().toString()));
             hashesCount++;
-            document.getElementById('stats').innerText = `Kopiesz jako: ${username} | Obliczone hashe: ${hashesCount}`;
             
-            // Wykonuj operację bez blokowania przeglądarki
+            document.getElementById('stats').innerHTML = `
+                Kopiesz jako: <strong>${username}</strong><br>
+                Obliczone hashe: ${hashesCount}
+            `;
+            
             setTimeout(mineLoop, 1);
         }
 
         async function saveProgress() {
             if(!mining) return;
 
-            // Wyliczamy ile "Żulcoinów" dostał za te 10 sekund (np. 1 moneta za 5000 hashy)
-            const reward = Math.floor(hashesCount / 5000);
+            // 1 moneta za każde 2000 hashy (zmniejszyłem próg, żeby szybciej wpadło)
+            const reward = Math.floor(hashesCount / 2000);
             if (reward === 0) return;
             
-            hashesCount = 0; // reset licznika po wysłaniu
+            hashesCount = 0; 
 
-            // Sprawdzamy czy użytkownik istnieje w bazie
-            let { data: user } = await supabase.from('users').select('*').eq('username', username).single();
+            try {
+                // Sprawdzenie w Supabase
+                let { data: user, error: selectError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('username', username)
+                    .maybeSingle();
 
-            if (!user) {
-                // Jeśli nowy user -> stwórz go
-                await supabase.from('users').insert([{ username: username, balance: reward }]);
-            } else {
-                // Jeśli już istnieje -> dodaj mu monety do obecnego salda
-                await supabase.from('users').update({ balance: user.balance + reward }).eq('username', username);
+                if (selectError) throw selectError;
+
+                if (!user) {
+                    // Nowy gracz -> dodajemy do bazy
+                    let { error: insertError } = await supabase.from('users').insert([{ username: username, balance: reward }]);
+                    if (insertError) throw insertError;
+                } else {
+                    // Aktualizacja salda
+                    let { error: updateError } = await supabase.from('users').update({ balance: user.balance + reward }).eq('username', username);
+                    if (updateError) throw updateError;
+                }
+                
+                console.log(`Dodano pomyślnie +${reward} Żulcoinów!`);
+            } catch (err) {
+                console.error("Błąd zapisu:", err);
+                alert("Błąd Supabase: " + err.message + "\\nUpewnij się, czy wyłączyłeś RLS w opcjach tabeli!");
             }
-            
-            console.log(`Dodano ${reward} Żulcoinów dla ${username}`);
         }
     </script>
 </body>
