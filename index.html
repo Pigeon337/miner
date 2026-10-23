@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Żulcoin Web Miner</title>
-    <!-- Zmieniony link do Supabase (serwery UNPKG - ominięcie błędu połączenia) -->
-    <script src="https://unpkg.com/@supabase/supabase-js"></script>
     <style>
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -70,22 +68,14 @@
     </div>
 
     <script>
-        // --- TWOJA KONFIGURACJA SUPABASE ---
-        const DB_URL = "https://pktfhhkkiiqbgeorrbig.supabase.co;
-        const DB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrdGZoaGtraWlxYmdlb3JyYmlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NjgxODAsImV4cCI6MjEwODM0NDE4MH0.L7QGv1yUMsgQ6zU-MIqqlA7_ycpjWO4vZBiDlhfo2eM";
-        
-        // Zmiana nazwy zmiennej, aby uniknąć konfliktu nazw z biblioteką z linku (CDN)
-        const mySupabase = window.supabase ? window.supabase.createClient(DB_URL, DB_KEY) : null;
+        // --- TUTAJ WKLEJ SWÓJ URL Z GOOGLE APPS SCRIPT ---
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwAtip-DFf61M8KH0p_AR7e7pGlPipqxNO1-3Ns2fbXwh36lu06vzpW89CTue_NI6DJ/exec";
 
         let mining = false;
         let hashesCount = 0;
         let userNick = "";
 
-        async function startMining() {
-            if (!mySupabase) {
-                return alert("Błąd: Nie załadowano biblioteki Supabase. Odśwież stronę.");
-            }
-
+        function startMining() {
             userNick = document.getElementById('username').value.trim();
             if(!userNick) return alert("Musisz wpisać swój nick!");
             
@@ -95,8 +85,8 @@
             
             mineLoop();
             
-            // Zapis co 10 sekund
-            setInterval(saveProgress, 10000);
+            // Zapis do Arkusza Google co 15 sekund
+            setInterval(saveProgress, 15000);
         }
 
         function mineLoop() {
@@ -116,34 +106,31 @@
         async function saveProgress() {
             if(!mining) return;
 
-            // 1 moneta za 2000 hashy
+            // 1 moneta za każde 2000 hashy
             const reward = Math.floor(hashesCount / 2000);
             if (reward === 0) return;
             
             hashesCount = 0; 
 
-            try {
-                let { data: user, error: selectError } = await mySupabase
-                    .from('users')
-                    .select('*')
-                    .eq('username', userNick)
-                    .maybeSingle();
-
-                if (selectError) throw selectError;
-
-                if (!user) {
-                    let { error: insertError } = await mySupabase.from('users').insert([{ username: userNick, balance: reward }]);
-                    if (insertError) throw insertError;
-                } else {
-                    let { error: updateError } = await mySupabase.from('users').update({ balance: user.balance + reward }).eq('username', userNick);
-                    if (updateError) throw updateError;
-                }
-                
-                console.log(`Dodano +${reward} Żulcoinów dla ${userNick}`);
-            } catch (err) {
-                console.error("Błąd zapisu:", err);
-                alert("Błąd bazy: " + err.message);
-            }
+            // Wysyłamy dane metodą POST do Arkusza Google
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors", // Ignoruje błędy CORS w przeglądarce, Google i tak to zapisze
+                cache: "no-cache",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    username: userNick,
+                    reward: reward
+                })
+            })
+            .then(() => {
+                console.log(`Paczka danych wysłana do Arkusza dla: ${userNick}`);
+            })
+            .catch(err => {
+                console.error("Błąd wysyłania do Arkusza:", err);
+            });
         }
     </script>
 </body>
