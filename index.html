@@ -71,19 +71,19 @@
 
     <script>
         // --- TWOJA KONFIGURACJA SUPABASE ---
-        const SUPABASE_URL = "https://supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrdGZoaGtraWlxYmdlb3JyYmlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NjgxODAsImV4cCI6MjEwODM0NDE4MH0.L7QGv1yUMsgQ6zU-MIqqlA7_ycpjWO4vZBiDlhfo2eM";
+        const DB_URL = "https://pktfhhkkiiqbgeorrbig.supabase.co;
+        const DB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrdGZoaGtraWlxYmdlb3JyYmlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NjgxODAsImV4cCI6MjEwODM0NDE4MH0.L7QGv1yUMsgQ6zU-MIqqlA7_ycpjWO4vZBiDlhfo2eM";
         
-        // Zabezpieczenie na wypadek, gdyby biblioteka ładowała się ułamek sekundy dłużej
-        const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+        // Zmiana nazwy zmiennej, aby uniknąć konfliktu nazw z biblioteką z linku (CDN)
+        const mySupabase = window.supabase ? window.supabase.createClient(DB_URL, DB_KEY) : null;
 
         let mining = false;
         let hashesCount = 0;
-        let userNick = ""; // Zmieniono nazwę, żeby nie gryzła się z ID elementu HTML
+        let userNick = "";
 
         async function startMining() {
-            if (!supabaseClient) {
-                return alert("Błąd: Nie udało się załadować biblioteki Supabase. Sprawdź połączenie z internetem lub odśwież stronę.");
+            if (!mySupabase) {
+                return alert("Błąd: Nie załadowano biblioteki Supabase. Odśwież stronę.");
             }
 
             userNick = document.getElementById('username').value.trim();
@@ -95,7 +95,7 @@
             
             mineLoop();
             
-            // Wysyłanie danych co 10 sekund
+            // Zapis co 10 sekund
             setInterval(saveProgress, 10000);
         }
 
@@ -116,15 +116,14 @@
         async function saveProgress() {
             if(!mining) return;
 
-            // 1 moneta za każde 2000 hashy
+            // 1 moneta za 2000 hashy
             const reward = Math.floor(hashesCount / 2000);
             if (reward === 0) return;
             
             hashesCount = 0; 
 
             try {
-                // Szukamy gracza w bazie danych
-                let { data: user, error: selectError } = await supabaseClient
+                let { data: user, error: selectError } = await mySupabase
                     .from('users')
                     .select('*')
                     .eq('username', userNick)
@@ -133,19 +132,17 @@
                 if (selectError) throw selectError;
 
                 if (!user) {
-                    // Jeśli gracz jest nowy -> dodaj go
-                    let { error: insertError } = await supabaseClient.from('users').insert([{ username: userNick, balance: reward }]);
+                    let { error: insertError } = await mySupabase.from('users').insert([{ username: userNick, balance: reward }]);
                     if (insertError) throw insertError;
                 } else {
-                    // Jeśli gracz już istnieje -> zaktualizuj jego stan konta
-                    let { error: updateError } = await supabaseClient.from('users').update({ balance: user.balance + reward }).eq('username', userNick);
+                    let { error: updateError } = await mySupabase.from('users').update({ balance: user.balance + reward }).eq('username', userNick);
                     if (updateError) throw updateError;
                 }
                 
-                console.log(`Zapisano! Dodano +${reward} Żulcoinów dla konta: ${userNick}`);
+                console.log(`Dodano +${reward} Żulcoinów dla ${userNick}`);
             } catch (err) {
-                console.error("Błąd bazy danych:", err);
-                alert("Błąd zapisu do bazy: " + err.message);
+                console.error("Błąd zapisu:", err);
+                alert("Błąd bazy: " + err.message);
             }
         }
     </script>
