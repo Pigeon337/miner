@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Żulcoin Web Miner</title>
-    <!-- Ładowanie Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Zmieniony link do Supabase (serwery UNPKG - ominięcie błędu połączenia) -->
+    <script src="https://unpkg.com/@supabase/supabase-js"></script>
     <style>
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -71,19 +71,23 @@
 
     <script>
         // --- TWOJA KONFIGURACJA SUPABASE ---
-        const SUPABASE_URL = "https://pktfhhkkiiqbgeorrbig.supabase.co";
+        const SUPABASE_URL = "https://supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrdGZoaGtraWlxYmdlb3JyYmlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NjgxODAsImV4cCI6MjEwODM0NDE4MH0.L7QGv1yUMsgQ6zU-MIqqlA7_ycpjWO4vZBiDlhfo2eM";
         
-        // POPRAWIONO: Inicjalizacja poprzez zmienną globalną window
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Zabezpieczenie na wypadek, gdyby biblioteka ładowała się ułamek sekundy dłużej
+        const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
         let mining = false;
         let hashesCount = 0;
-        let username = "";
+        let userNick = ""; // Zmieniono nazwę, żeby nie gryzła się z ID elementu HTML
 
         async function startMining() {
-            username = document.getElementById('username').value.trim();
-            if(!username) return alert("Musisz wpisać swój nick!");
+            if (!supabaseClient) {
+                return alert("Błąd: Nie udało się załadować biblioteki Supabase. Sprawdź połączenie z internetem lub odśwież stronę.");
+            }
+
+            userNick = document.getElementById('username').value.trim();
+            if(!userNick) return alert("Musisz wpisać swój nick!");
             
             mining = true;
             document.getElementById('startBtn').disabled = true;
@@ -91,7 +95,7 @@
             
             mineLoop();
             
-            // Wysyłanie urobku automatycznie co 10 sekund
+            // Wysyłanie danych co 10 sekund
             setInterval(saveProgress, 10000);
         }
 
@@ -102,7 +106,7 @@
             hashesCount++;
             
             document.getElementById('stats').innerHTML = `
-                Kopiesz jako: <strong>${username}</strong><br>
+                Kopiesz jako: <strong>${userNick}</strong><br>
                 Obliczone hashe: ${hashesCount}
             `;
             
@@ -112,36 +116,36 @@
         async function saveProgress() {
             if(!mining) return;
 
-            // 1 moneta za każde 2000 hashy (zmniejszyłem próg, żeby szybciej wpadło)
+            // 1 moneta za każde 2000 hashy
             const reward = Math.floor(hashesCount / 2000);
             if (reward === 0) return;
             
             hashesCount = 0; 
 
             try {
-                // Sprawdzenie w Supabase
-                let { data: user, error: selectError } = await supabase
+                // Szukamy gracza w bazie danych
+                let { data: user, error: selectError } = await supabaseClient
                     .from('users')
                     .select('*')
-                    .eq('username', username)
+                    .eq('username', userNick)
                     .maybeSingle();
 
                 if (selectError) throw selectError;
 
                 if (!user) {
-                    // Nowy gracz -> dodajemy do bazy
-                    let { error: insertError } = await supabase.from('users').insert([{ username: username, balance: reward }]);
+                    // Jeśli gracz jest nowy -> dodaj go
+                    let { error: insertError } = await supabaseClient.from('users').insert([{ username: userNick, balance: reward }]);
                     if (insertError) throw insertError;
                 } else {
-                    // Aktualizacja salda
-                    let { error: updateError } = await supabase.from('users').update({ balance: user.balance + reward }).eq('username', username);
+                    // Jeśli gracz już istnieje -> zaktualizuj jego stan konta
+                    let { error: updateError } = await supabaseClient.from('users').update({ balance: user.balance + reward }).eq('username', userNick);
                     if (updateError) throw updateError;
                 }
                 
-                console.log(`Dodano pomyślnie +${reward} Żulcoinów!`);
+                console.log(`Zapisano! Dodano +${reward} Żulcoinów dla konta: ${userNick}`);
             } catch (err) {
-                console.error("Błąd zapisu:", err);
-                alert("Błąd Supabase: " + err.message + "\\nUpewnij się, czy wyłączyłeś RLS w opcjach tabeli!");
+                console.error("Błąd bazy danych:", err);
+                alert("Błąd zapisu do bazy: " + err.message);
             }
         }
     </script>
