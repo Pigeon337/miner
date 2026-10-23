@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Żulcoin Web Miner</title>
+    <!-- Ładowanie Supabase -->
+    <script src="https://jsdelivr.net"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background: #222; color: #fff; padding-top: 50px; }
+        input, button { padding: 10px; font-size: 16px; margin: 5px; }
+        #stats { font-size: 20px; margin-top: 20px; color: #00ffcc; }
+    </style>
+</head>
+<body>
+
+    <h1>⛏️ Żulcoin Web Miner ⛏️</h1>
+    <input type="text" id="username" placeholder="Wpisz swój nick...">
+    <br>
+    <button id="startBtn" onclick="startMining()">Rozpocznij kopanie</button>
+    
+    <div id="stats">Status: Oczekiwanie...</div>
+
+    <script>
+        // --- KONFIGURACJA SUPABASE ---
+// --- KONFIGURACJA SUPABASE ---
+	const SUPABASE_URL = "https://pktfhhkkiiqbgeorrbig.supabase.co";
+	const SUPABASE_KEY = 	"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrdGZoaGtraWlxYmdlb3JyYmlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NjgxODAsImV4cCI6MjEwODM0NDE4MH0.	L7QGv1yUMsgQ6zU-MIqqlA7_ycpjWO4vZBiDlhfo2eM";
+	const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+
+        let mining = false;
+        let hashesCount = 0;
+        let username = "";
+
+        async function startMining() {
+            username = document.getElementById('username').value.trim();
+            if(!username) return alert("Wpisz nick!");
+            
+            mining = true;
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('username').disabled = true;
+            
+            // Pętla kopiąca (liczenie losowych hashy w tle)
+            mineLoop();
+            
+            // Pętla wysyłająca nagrodę do bazy co 10 sekund
+            setInterval(saveProgress, 10000);
+        }
+
+        function mineLoop() {
+            if(!mining) return;
+            // Proste symulowanie pracy procesora (generowanie hashu)
+            crypto.subtle.digest("SHA-256", new TextEncoder().encode(Math.random().toString()));
+            hashesCount++;
+            document.getElementById('stats').innerText = `Kopiesz jako: ${username} | Obliczone hashe: ${hashesCount}`;
+            
+            // Wykonuj operację bez blokowania przeglądarki
+            setTimeout(mineLoop, 1);
+        }
+
+        async function saveProgress() {
+            if(!mining) return;
+
+            // Wyliczamy ile "Żulcoinów" dostał za te 10 sekund (np. 1 moneta za 5000 hashy)
+            const reward = Math.floor(hashesCount / 5000);
+            if (reward === 0) return;
+            
+            hashesCount = 0; // reset licznika po wysłaniu
+
+            // Sprawdzamy czy użytkownik istnieje w bazie
+            let { data: user } = await supabase.from('users').select('*').eq('username', username).single();
+
+            if (!user) {
+                // Jeśli nowy user -> stwórz go
+                await supabase.from('users').insert([{ username: username, balance: reward }]);
+            } else {
+                // Jeśli już istnieje -> dodaj mu monety do obecnego salda
+                await supabase.from('users').update({ balance: user.balance + reward }).eq('username', username);
+            }
+            
+            console.log(`Dodano ${reward} Żulcoinów dla ${username}`);
+        }
+    </script>
+</body>
+</html>
